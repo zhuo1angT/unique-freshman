@@ -3,7 +3,6 @@
 
 #include <cstring>
 #include <iostream>
-#include <map>
 
 using std::log;
 
@@ -18,8 +17,7 @@ class priority_queue {
        public:
         T value;
         int degree;
-        node *left, *right;
-        node *parent, *child;
+        node *left, *right, *parent, *child;
 
         node(T Value) {
             value = Value;
@@ -29,11 +27,9 @@ class priority_queue {
         }
         node(node *ptr) {
             value = ptr->value;
-            left = ptr->left;
-            right = ptr->right;
-            parent = ptr->parent;
             child = ptr->child;
             degree = ptr->degree;
+            parent = left = right = nullptr;
         }
     };
 
@@ -90,6 +86,8 @@ class priority_queue {
             min_node = temp;
         }
     }
+    void maintainMin(node *left_most_node);
+    void consolidate();
 
    public:
     priority_queue() {
@@ -104,6 +102,116 @@ class priority_queue {
     void push(const T &value);
     void pop();
 };
+
+// private functions
+
+template <typename T>
+void priority_queue<T>::consolidate() {
+    int tot_log_degree = (int)(1 + (1 + log(size_) / log(2)));
+
+    node **tree_size = new node *[tot_log_degree];
+    memset(tree_size, 0, sizeof(node *) * tot_log_degree);
+
+    unique::priority_queue<T> consol;
+    node *cur_node = min_node;  // actually the left-most node
+
+    while (cur_node != nullptr) {
+        node *_old = new node(cur_node);
+
+        int log_degree = (int)(1 + log(cur_node->degree) / log(2));
+
+        if (tree_size[log_degree] == nullptr) {
+            if (consol.min_node == nullptr) {
+                consol.min_node = _old;
+                consol.min_node->left = nullptr;
+                consol.min_node->right = nullptr;
+            } else {
+                consol.insertRight(consol.min_node, _old);
+
+                if (_old->value < consol.min_node->value)
+                    consol.min_node = _old;
+            }
+            tree_size[log_degree] = _old;
+        } else {
+            node *_new0 = tree_size[log_degree];
+
+            if (_old->value < _new0->value) {
+                if (_old->child != nullptr) _old->child->parent = _new0;
+                if (_new0->child != nullptr) _new0->child->parent = _old;
+                std::swap(_old->value, _new0->value);
+                std::swap(_old->child, _new0->child);
+                std::swap(_old->parent, _new0->parent);
+            }
+
+            if (_old->value < consol.min_node->value) consol.min_node = _old;
+            if (_new0->value < consol.min_node->value) consol.min_node = _new0;
+
+            if (_new0->child != nullptr) {
+                _new0->child->left = _old;
+                _old->right = _new0->child;
+                _new0->child = _old;
+                _old->left = nullptr;
+            } else {
+                _new0->child = _old;
+                _new0->child->left = _new0->child->right = nullptr;
+            }
+
+            _old->parent = _new0;
+            _old->left = nullptr;
+
+            tree_size[log_degree] = nullptr;
+            _new0->degree *= 2;
+
+            log_degree++;
+
+            while (tree_size[log_degree] != nullptr) {
+                node *_new1 = tree_size[log_degree];
+                if (_new1->value < _new0->value) {
+                    std::swap(_new1, _new0);
+                } else if (_new1 == consol.min_node) {
+                    std::swap(_new1, _new0);
+                    consol.min_node = _new0;
+                }
+
+                if (_new1->left != nullptr) _new1->left->right = _new1->right;
+                if (_new1->right != nullptr) _new1->right->left = _new1->left;
+
+                _new0->child->left = _new1;
+                _new1->right = _new0->child;
+                _new1->left = nullptr;
+                _new1->parent = _new0;
+                _new0->child = _new1;
+
+                tree_size[log_degree] = nullptr;
+                _new0->degree *= 2;
+
+                log_degree++;
+            }
+
+            tree_size[log_degree] = _new0;
+        }
+        cur_node = cur_node->right;
+        if (cur_node != nullptr) {
+            delete cur_node->left;
+            cur_node->left = nullptr;
+        }
+    }
+    min_node = consol.min_node;
+    delete tree_size;
+}
+
+template <typename T>
+void priority_queue<T>::maintainMin(node *left_most_node) {
+    node *cur = left_most_node, *min = left_most_node;
+    while (cur != nullptr) {
+        if (cur->value < min->value) min = cur;
+        cur = cur->right;
+    }
+    nodeSwap(min_node, min);
+    min_node = min;
+}
+
+// public funtions
 
 template <typename T>
 const T &priority_queue<T>::top() const {
@@ -123,6 +231,7 @@ size_type priority_queue<T>::size() const {
 template <typename T>
 void priority_queue<T>::push(const T &value) {
     node *new_node = new node(value);
+    size_ += 1;
     if (min_node == nullptr) {
         min_node = new_node;
     } else {
@@ -133,17 +242,16 @@ void priority_queue<T>::push(const T &value) {
             min_node = temp;
         }
     }
-
-    size_++;
 }
 
 template <typename T>
 void priority_queue<T>::pop() {
     if (size_ == 0) {
-        std::cerr << "Error: popping from an empty priority_queue!"
-                  << std::endl;
-        exit(0);
+        std::cerr << "Error: popping from an empty queue!" << std::endl;
+        exit(1);
     }
+
+    size_ -= 1;
 
     node *cur_child = min_node->child;
     while (cur_child != nullptr) {
@@ -156,124 +264,15 @@ void priority_queue<T>::pop() {
 
     deleteMinNode();
 
-    if (min_node != nullptr) {
-        node *p1 = min_node, *pm = min_node;
-        while (p1 != nullptr) {
-            if (p1->value < pm->value) pm = p1;
-            p1 = p1->right;
-        }
-        nodeSwap(min_node, pm);
-        min_node = pm;
-    }
+    if (min_node == nullptr) return;
 
-    if (min_node != nullptr) {
-        node **tree_size = new node *[27];
-        memset(tree_size, 0, sizeof(node *) * 27);
+    maintainMin(min_node);
+    consolidate();
 
-        unique::priority_queue<T> cons;
-        node *cur_node = min_node;  // actually the left-most node
-
-        while (cur_node != nullptr) {
-            node *temp = new node(cur_node);
-            temp->parent = temp->left = temp->right = nullptr;
-
-            int log_degree = (int)(1 + log(cur_node->degree) / log(2));
-
-            if (tree_size[log_degree] == nullptr) {
-                if (cons.min_node == nullptr) {
-                    cons.min_node = temp;
-                    cons.min_node->left = nullptr;
-                    cons.min_node->right = nullptr;
-                } else {
-                    cons.insertRight(cons.min_node, temp);
-
-                    if (temp->value < cons.min_node->value)
-                        cons.min_node = temp;
-                }
-                tree_size[log_degree] = temp;
-            } else {
-                node *cons_node = tree_size[log_degree];
-
-                if (temp->value < cons_node->value) {
-                    if (temp->child != nullptr) temp->child->parent = cons_node;
-                    if (cons_node->child != nullptr)
-                        cons_node->child->parent = temp;
-                    std::swap(temp->value, cons_node->value);
-                    std::swap(temp->child, cons_node->child);
-                    std::swap(temp->degree, cons_node->degree);
-                    std::swap(temp->parent, cons_node->parent);
-                }
-
-                if (temp->value < cons.min_node->value) cons.min_node = temp;
-                if (cons_node->value < cons.min_node->value)
-                    cons.min_node = cons_node;
-
-                if (cons_node->child != nullptr) {
-                    cons_node->child->left = temp;
-                    temp->right = cons_node->child;
-                    cons_node->child = temp;
-                    temp->left = nullptr;
-                } else {
-                    cons_node->child = temp;
-                    cons_node->child->left = cons_node->child->right = nullptr;
-                }
-
-                temp->parent = cons_node;
-                temp->left = nullptr;
-
-                tree_size[log_degree] = nullptr;
-                cons_node->degree *= 2;
-
-                log_degree++;
-
-                while (tree_size[log_degree] != nullptr) {
-                    node *cons1_node = tree_size[log_degree];
-                    if (cons1_node->value < cons_node->value) {
-                        std::swap(cons1_node, cons_node);
-                    } else if (cons1_node == cons.min_node) {
-                        std::swap(cons1_node, cons_node);
-                        cons.min_node = cons_node;
-                    }
-
-                    if (cons1_node->left != nullptr)
-                        cons1_node->left->right = cons1_node->right;
-                    if (cons1_node->right != nullptr)
-                        cons1_node->right->left = cons1_node->left;
-
-                    cons_node->child->left = cons1_node;
-                    cons1_node->right = cons_node->child;
-                    cons1_node->left = nullptr;
-                    cons1_node->parent = cons_node;
-                    cons_node->child = cons1_node;
-
-                    tree_size[log_degree] = nullptr;
-                    cons_node->degree *= 2;
-
-                    log_degree++;
-                }
-
-                tree_size[log_degree] = cons_node;
-            }
-            cur_node = cur_node->right;
-            if (cur_node != nullptr) {
-                delete cur_node->left;
-                cur_node->left = nullptr;
-            }
-        }
-        min_node = cons.min_node;
-        delete tree_size;
-    }
-
-    size_--;
-
-    node *p = min_node;
-    if (p == nullptr) return;
-    while (p->left != nullptr) {
-        p = p->left;
-    }
-
-    nodeSwap(min_node, p);
-    min_node = p;
+    node *cur = min_node;
+    while (cur->left != nullptr) cur = cur->left;
+    nodeSwap(min_node, cur);
+    min_node = cur;
 }
 
 }  // namespace unique
