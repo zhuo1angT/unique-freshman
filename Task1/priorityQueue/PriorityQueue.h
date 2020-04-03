@@ -81,6 +81,14 @@ class priority_queue {
     void deleteMinNode() {
         if (min_node->left != nullptr) min_node->left->right = min_node->right;
         if (min_node->right != nullptr) min_node->right->left = min_node->left;
+        if (min_node->right == nullptr && min_node->left == nullptr) {
+            delete min_node;
+            min_node = nullptr;
+        } else {
+            node *temp = min_node->right;
+            delete min_node;
+            min_node = temp;
+        }
     }
 
    public:
@@ -145,23 +153,13 @@ void priority_queue<T>::pop() {
         cur_child->parent = nullptr;
         cur_child = next;
     }
-    deleteMinNode();
 
-    if (min_node->right == nullptr && min_node->left == nullptr) {
-        delete min_node;
-        min_node = nullptr;
-    } else {
-        node *temp = min_node->right;
-        delete min_node;
-        min_node = temp;
-    }
+    deleteMinNode();
 
     if (min_node != nullptr) {
         node *p1 = min_node, *pm = min_node;
         while (p1 != nullptr) {
-            if (p1->value < pm->value) {
-                pm = p1;
-            }
+            if (p1->value < pm->value) pm = p1;
             p1 = p1->right;
         }
         nodeSwap(min_node, pm);
@@ -169,18 +167,19 @@ void priority_queue<T>::pop() {
     }
 
     if (min_node != nullptr) {
-        node **tree_size = new node *[40];
-        memset(tree_size, 0, sizeof(node *) * 40);
+        node **tree_size = new node *[27];
+        memset(tree_size, 0, sizeof(node *) * 27);
 
         unique::priority_queue<T> cons;
-        node *cur_node = this->min_node;  // actually the left-most node
+        node *cur_node = min_node;  // actually the left-most node
 
         while (cur_node != nullptr) {
             node *temp = new node(cur_node);
             temp->parent = temp->left = temp->right = nullptr;
 
-            if (tree_size[(int)(1 + log(cur_node->degree) / log(2))] ==
-                nullptr) {
+            int log_degree = (int)(1 + log(cur_node->degree) / log(2));
+
+            if (tree_size[log_degree] == nullptr) {
                 if (cons.min_node == nullptr) {
                     cons.min_node = temp;
                     cons.min_node->left = nullptr;
@@ -191,10 +190,9 @@ void priority_queue<T>::pop() {
                     if (temp->value < cons.min_node->value)
                         cons.min_node = temp;
                 }
-                tree_size[(int)(1 + log(cur_node->degree) / log(2))] = temp;
+                tree_size[log_degree] = temp;
             } else {
-                node *cons_node =
-                    tree_size[(int)(1 + log(temp->degree) / log(2))];
+                node *cons_node = tree_size[log_degree];
 
                 if (temp->value < cons_node->value) {
                     if (temp->child != nullptr) temp->child->parent = cons_node;
@@ -214,7 +212,6 @@ void priority_queue<T>::pop() {
                     cons_node->child->left = temp;
                     temp->right = cons_node->child;
                     cons_node->child = temp;
-                    // cons_node->left = nullptr;
                     temp->left = nullptr;
                 } else {
                     cons_node->child = temp;
@@ -224,13 +221,13 @@ void priority_queue<T>::pop() {
                 temp->parent = cons_node;
                 temp->left = nullptr;
 
-                tree_size[(int)(1 + log(temp->degree) / log(2))] = nullptr;
+                tree_size[log_degree] = nullptr;
                 cons_node->degree *= 2;
 
-                while (tree_size[(int)(1 + log(cons_node->degree) / log(2))] !=
-                       nullptr) {
-                    node *cons1_node =
-                        tree_size[(int)(1 + log(cons_node->degree) / log(2))];
+                log_degree++;
+
+                while (tree_size[log_degree] != nullptr) {
+                    node *cons1_node = tree_size[log_degree];
                     if (cons1_node->value < cons_node->value) {
                         std::swap(cons1_node, cons_node);
                     } else if (cons1_node == cons.min_node) {
@@ -249,13 +246,13 @@ void priority_queue<T>::pop() {
                     cons1_node->parent = cons_node;
                     cons_node->child = cons1_node;
 
-                    tree_size[(int)(1 + log(cons_node->degree) / log(2))] =
-                        nullptr;
+                    tree_size[log_degree] = nullptr;
                     cons_node->degree *= 2;
+
+                    log_degree++;
                 }
 
-                tree_size[(int)(1 + log(cons_node->degree) / log(2))] =
-                    cons_node;
+                tree_size[log_degree] = cons_node;
             }
             cur_node = cur_node->right;
             if (cur_node != nullptr) {
