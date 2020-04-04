@@ -57,8 +57,6 @@ class set {
     void insert(const T &value);
     size_type erase(const T &value);
     size_type count(const T &value);
-
-    bool isLeaf(const T &value);
 };
 
 // private functions
@@ -95,10 +93,6 @@ template <typename T>
 typename set<T>::node *set<T>::insert(node *h, T value) {
     if (h == nullptr) return new node(value, RED);
 
-    if (h->left != nullptr && h->right != nullptr)
-        if (isRed(h->left) && isRed(h->right))
-            colorFlip(h);  // split 4-node on the way down
-
     if (value < h->value) {
         h->left = insert(h->left, value);
     } else if (value > h->value) {
@@ -110,6 +104,10 @@ typename set<T>::node *set<T>::insert(node *h, T value) {
 
     if (h->left != nullptr)
         if (isRed(h->left) && isRed(h->left->left)) h = rightRotate(h);
+
+    if (h->left != nullptr && h->right != nullptr)
+        if (isRed(h->left) && isRed(h->right))
+            colorFlip(h);  // split 4-node on the way down
 
     return h;
 }
@@ -257,22 +255,6 @@ size_type set<T>::count(const T &value) {
         }
     }
     return (size_type)0;
-}
-
-template <typename T>
-bool set<T>::isLeaf(const T &value) {
-    node *cur = root;
-    while (cur != nullptr) {
-        if (value < cur->value) {
-            cur = cur->left;
-        } else if (value == cur->value) {
-            return (cur->left == nullptr && cur->right == nullptr) ? true
-                                                                   : false;
-        } else if (value > cur->value) {
-            cur = cur->right;
-        }
-    }
-    return false;
 }
 
 }  // namespace unique

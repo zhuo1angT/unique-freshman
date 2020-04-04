@@ -3,9 +3,10 @@
 #include <set>
 
 #include "Set.h"
+#include "chen.h"
 #include "gtest/gtest.h"
 
-std::set<int> stdSet;
+Set<int> stdSet;
 unique::set<int> stuSet;
 
 const int SIZE = 600000;
