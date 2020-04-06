@@ -1,5 +1,5 @@
 #ifndef _UNIQUE_PRIORITY_QUEUE_H_
-#define _UNIQUE_PRIORITY_QUEUE_H
+#define _UNIQUE_PRIORITY_QUEUE_H_
 
 #include <cstring>
 #include <iostream>

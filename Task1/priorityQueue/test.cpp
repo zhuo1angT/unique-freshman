@@ -7,7 +7,7 @@
 #include "PriorityQueue.h"
 #include "gtest/gtest.h"
 
-const int SIZE = 600000;
+const int SIZE = 6000000;
 
 TEST(AllTests, HandlerTrueReturn) {
     std::priority_queue<int, std::vector<int>, std::greater<int> > stdQueue;
