@@ -60,6 +60,6 @@ int main() {
 void eval(char *cmdline) {}
 void sigint_handler(int sig) {
     write(1, "\n", 1);  // stdout <- "\n"
-    kill(fg_pid, 0);    // kill(fg_pid, 0)     // to fix
+    kill(fg_pid, 0);
     fg = false;
 }
