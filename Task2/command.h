@@ -51,6 +51,12 @@ char *myEcho(const char str[]) {
 
 void myExit() { exit(0); }
 
+void myCd(char target[]) {
+    if (chdir(target) == -1) {
+        unix_error("Error: cd failed\n");
+    }
+}
+
 void myPwd() {
     if (getcwd(pwd_buf, MAX_LINE) == NULL) {
         unix_error("Error: pwd failed\n");
