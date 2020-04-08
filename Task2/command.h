@@ -1,12 +1,15 @@
-#ifndef UNIQUE_CMD_H_
-#define UNIQUE_CMD_H_
+#ifndef _UNIQUE_CMD_H_
+#define _UNIQUE_CMD_H_
 
 #include <stdio.h>
+
+#include "wrapper.h"
 
 #define MAX_LINE 500
 #define MAX_ARGS 50
 
 char echo_buf[MAX_LINE];
+char pwd_buf[MAX_LINE];
 
 char *myEcho(const char str[]) {
     int i = 0, j = 0;
@@ -47,6 +50,13 @@ char *myEcho(const char str[]) {
 }
 
 void myExit() { exit(0); }
+
+void myPwd() {
+    if (getcwd(pwd_buf, MAX_LINE) == NULL) {
+        unix_error("Error: pwd failed\n");
+    }
+    printf("%s\n", pwd_buf);
+}
 
 void echo_test() {
     // passed
