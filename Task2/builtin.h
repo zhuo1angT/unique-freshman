@@ -1,5 +1,5 @@
-#ifndef _UNIQUE_CMD_H_
-#define _UNIQUE_CMD_H_
+#ifndef _UNIQUE_BUILTIN_H_
+#define _UNIQUE_BUILTIN_H_
 
 #include <stdio.h>
 
@@ -17,7 +17,6 @@ char *myEcho(const char str[]) {
 
     while (i < len) {
         if (word) {
-            bool pass = false;
             if (str[i] == ' ' && match) {
                 word = false;
                 echo_buf[j++] = ' ';
