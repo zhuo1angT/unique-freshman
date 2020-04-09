@@ -108,6 +108,6 @@ void parse(char *cmdline) {
 
 void sigint_handler(int sig) {
     write(1, "\n", 1);  // stdout <- "\n"
-    kill(fg_pid, 0);
+    Kill((pid_t)fg_pid, 0);
     bg = true;
 }

@@ -40,4 +40,12 @@ int Execve(char *filename, char *argv[], char *envp[]) {
     return ret;
 }
 
+int Kill(pid_t pid, int sig) {
+    int ret;
+    if ((ret == kill(pid, sig)) < 0) {
+        unix_error("Error: kill failed!");
+    }
+    return ret;
+}
+
 #endif

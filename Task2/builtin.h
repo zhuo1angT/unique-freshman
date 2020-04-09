@@ -1,7 +1,11 @@
 #ifndef _UNIQUE_BUILTIN_H_
 #define _UNIQUE_BUILTIN_H_
 
+#include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "wrapper.h"
 
@@ -11,7 +15,7 @@
 char echo_buf[MAX_LINE];
 char pwd_buf[MAX_LINE];
 
-char *myEcho(const char str[]) {
+void myEcho(const char str[], FILE* outstream) {
     int i = 0, j = 0;
     int word = false, match = true, len = strlen(str);
 
@@ -45,7 +49,8 @@ char *myEcho(const char str[]) {
         }
     }
     echo_buf[j] = '\0';
-    return echo_buf;
+
+    // return echo_buf;
 }
 
 void myExit() { exit(0); }
@@ -63,16 +68,27 @@ void myPwd() {
     printf("%s\n", pwd_buf);
 }
 
+void myKill(int pid) {
+    if (pid != 0) Kill(pid, SIGTERM);
+}
+
+void myExport(const char* argv[]) {
+    char *ptr0 = argv[1], *ptr1 = argv[1];
+    while (*ptr1 != '=') ptr1++;
+    *ptr1 = '\0';
+    setenv(ptr0, ptr1, 1);
+}
+
 void echo_test() {
     // passed
-    printf("%s\n", myEcho("  foo      bar          baz "));
-    printf("%s\n", myEcho("foobar"));
-    printf("%s\n", myEcho("     foo "));
-    printf("%s\n", myEcho("  \"foo\""));
-    printf("%s\n", myEcho("foo bar \"baz \"   foo   "));
-    printf("%s\n", myEcho("   \"foo\"\"bar\"    "));
-    printf("%s\n", myEcho("\"foo\"\"bar\"\"baz\""));
-    printf("%s\n", myEcho("\"foo\" \"bar\" \"baz\""));
+    myEcho("  foo      bar          baz ", stdout);
+    myEcho("foobar", stdout);
+    myEcho("     foo ", stdout);
+    myEcho("  \"foo\"", stdout);
+    myEcho("foo bar \"baz \"   foo   ", stdout);
+    myEcho("   \"foo\"\"bar\"    ", stdout);
+    myEcho("\"foo\"\"bar\"\"baz\"", stdout);
+    myEcho("\"foo\" \"bar\" \"baz\"", stdout);
 }
 
 #endif
