@@ -72,7 +72,7 @@ void myKill(int pid) {
     if (pid != 0) Kill(pid, SIGTERM);
 }
 
-void myExport(const char* argv[]) {
+void myExport(char* argv[]) {
     char *ptr0 = argv[1], *ptr1 = argv[1];
     while (*ptr1 != '=') ptr1++;
     *ptr1 = '\0';

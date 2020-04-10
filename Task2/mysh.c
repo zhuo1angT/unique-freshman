@@ -20,8 +20,12 @@ int argc;
 char *argv[MAX_ARGS], *envp[MAX_ARGS];
 char cmd_buffer[MAX_LINE];
 
+int rplc_stdin = false, rplc_stdout = false, rplc_stderr = false;
+int save_stdin, save_stdout, save_stderr;
+
 void parse(char *cmdline);
 void set_bg();
+void io_redirect();
 
 void sigint_handler(int sig);
 
@@ -51,7 +55,9 @@ int main() {
 
         set_bg();
 
-        printf("%s\n", bg ? "bg" : "fg");
+        // printf("%s\n", bg ? "bg" : "fg");
+
+        { continue; }
 
         if ((pid = fork()) == 0) {  // child process
             execve(argv[0], argv, NULL);
@@ -79,16 +85,25 @@ void parse(char *cmdline) {
     argc = 0;
 
     while (i < len) {
+        if (cmdline[i] == '|' || cmdline[i] == '&' || cmdline[i] == '>' ||
+            cmdline[i] == '<') {
+            word = false;
+            argc++;
+            argv[argc - 1] = (char *)calloc(MAX_ARG_LENGTH, sizeof(char));
+            argv[argc - 1][0] = cmdline[i++];
+            j = 0;
+            continue;
+        }
+
         if (word) {
-            if ((cmdline[i] == ' ' || cmdline[i] == '>' || cmdline[i] == '<' ||
-                 cmdline[i] == '|' || cmdline[i] == '&') &&
-                match) {
+            if (cmdline[i] == ' ' && match) {
                 word = false;
                 argv[argc - 1][j++] = '\0';
                 i++;
                 j = 0;
                 continue;
             }
+
             if (cmdline[i] == '\"' && !match) {
                 match = true;
                 i++;
@@ -121,6 +136,31 @@ void set_bg() {
         bg = true;
     else
         bg = false;
+}
+
+void io_redirect() {
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "<")) {
+            if (i + 2 == argc ||
+                (i + 3 == argc && strcmp(argv[argc - 1], "&"))) {
+                rplc_stdin = true;
+                save_stdout = dup(0);
+                FILE *new_input_stream = freopen(argv[i], "r", stdin);
+            } else {  // Error
+                // Todo: Error report
+            }
+        }
+        if (strcmp(argv[i], ">") == 0) {
+            if (i + 2 == argc ||
+                (i + 3 == argc && strcmp(argv[argc - 1], "&"))) {
+                rplc_stdout = true;
+                save_stdout = dup(1);
+                FILE *new_output_stream = freopen(argv[i], "w", stdout);
+            } else {  // Error
+                // Todo: Error report
+            }
+        }
+    }
 }
 
 void sigint_handler(int sig) {
