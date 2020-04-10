@@ -26,6 +26,7 @@ int save_stdin, save_stdout, save_stderr;
 void parse(char *cmdline);
 void set_bg();
 void io_redirect();
+void io_reset();
 
 void sigint_handler(int sig);
 
@@ -55,9 +56,9 @@ int main() {
 
         set_bg();
 
-        // printf("%s\n", bg ? "bg" : "fg");
+        io_redirect();
 
-        { continue; }
+        // printf("%s\n", bg ? "bg" : "fg");
 
         if ((pid = fork()) == 0) {  // child process
             execve(argv[0], argv, NULL);
@@ -73,6 +74,7 @@ int main() {
 
         free(cmdline);
         for (int i = 0; i < argc; i++) free(argv[i]);
+        io_reset();
     }
 
     return 0;
@@ -140,12 +142,16 @@ void set_bg() {
 
 void io_redirect() {
     for (int i = 0; i < argc; i++) {
-        if (strcmp(argv[i], "<")) {
+        if (strcmp(argv[i], "<") == 0) {
             if (i + 2 == argc ||
                 (i + 3 == argc && strcmp(argv[argc - 1], "&"))) {
                 rplc_stdin = true;
-                save_stdout = dup(0);
-                FILE *new_input_stream = freopen(argv[i], "r", stdin);
+                save_stdin = dup(0);
+                FILE *new_input_stream = freopen(argv[i + 1], "r", stdin);
+
+                argv[i] = NULL;
+
+                return;
             } else {  // Error
                 // Todo: Error report
             }
@@ -155,11 +161,30 @@ void io_redirect() {
                 (i + 3 == argc && strcmp(argv[argc - 1], "&"))) {
                 rplc_stdout = true;
                 save_stdout = dup(1);
-                FILE *new_output_stream = freopen(argv[i], "w", stdout);
+                FILE *new_output_stream = freopen(argv[i + 1], "w", stdout);
+
+                argv[i] = NULL;
+
+                return;
             } else {  // Error
                 // Todo: Error report
             }
         }
+    }
+}
+
+void io_reset() {
+    if (rplc_stdin) {
+        dup2(save_stdin, 0);
+        rplc_stdin = false;
+    }
+    if (rplc_stdout) {
+        dup2(save_stdout, 1);
+        rplc_stdout = false;
+    }
+    if (rplc_stderr) {
+        dup2(save_stderr, 2);
+        rplc_stderr = false;
     }
 }
 
