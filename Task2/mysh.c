@@ -21,9 +21,11 @@ char *argv[MAX_ARGS], *envp[MAX_ARGS];
 char cmd_buffer[MAX_LINE];
 
 void parse(char *cmdline);
+void set_bg();
+
 void sigint_handler(int sig);
 
-int bg = false, fg_pid, sh_pid;
+int bg = false, pid, sh_pid;
 
 int main() {
     signal(SIGINT, sigint_handler);  // installing the "ctrl+C" handler
@@ -37,26 +39,34 @@ int main() {
         if (cmdline == NULL) {
             write(1, "\n", 1);  // stdout <- "\n"
             exit(0);
+        } else if (cmdline[0] == '\0') {
+            continue;
         }
-
         parse(cmdline);
+        argv[argc] = NULL;
 
         for (int i = 0; i < argc; i++) {
             printf("%d: %s\n", i, argv[i]);
         }
 
-        argv[argc] = NULL;
+        set_bg();
 
-        if ((fg_pid = fork()) == 0) {
-            execve(cmdline, argv, NULL);
-        } else {
-            bg = false;
-            waitpid(fg_pid, NULL, 0);
+        printf("%s\n", bg ? "bg" : "fg");
+
+        if ((pid = fork()) == 0) {  // child process
+            execve(argv[0], argv, NULL);
+            exit(0);
         }
 
-        // eval(cmdline);
+        if (!bg) {
+            int status;
+            Waitpid(pid, &status, 0);
+        } else {
+            printf("%d %s\n", pid, cmdline);
+        }
 
         free(cmdline);
+        for (int i = 0; i < argc; i++) free(argv[i]);
     }
 
     return 0;
@@ -94,7 +104,7 @@ void parse(char *cmdline) {
                 word = true;
                 argc++;
 
-                argv[argc - 1] = (char *)malloc(sizeof(char) * MAX_ARG_LENGTH);
+                argv[argc - 1] = (char *)calloc(MAX_ARG_LENGTH, sizeof(char));
 
                 if (cmdline[i] == '\"')
                     match = false;
@@ -106,8 +116,15 @@ void parse(char *cmdline) {
     }
 }
 
+void set_bg() {
+    if (strcmp(argv[argc - 1], "&") == 0)
+        bg = true;
+    else
+        bg = false;
+}
+
 void sigint_handler(int sig) {
     write(1, "\n", 1);  // stdout <- "\n"
-    Kill((pid_t)fg_pid, 0);
+    Kill((pid_t)pid, 0);
     bg = true;
 }

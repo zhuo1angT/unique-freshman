@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 void unix_error(char *msg) {  // unix-style error
-    fprintf(stderr, "%s\n errno:%s\n", strerror(errno), msg);
+    fprintf(stderr, "%s\n errno: \"%s\"\n", strerror(errno), msg);
     exit(0);
 }
 
