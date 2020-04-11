@@ -20,6 +20,9 @@ int argc;
 char *argv[MAX_ARGS], *envp[MAX_ARGS];
 char cmd_buffer[MAX_LINE];
 
+int pipe_fd[2];
+char pipe_buf[4 * 1024];
+
 int rplc_stdin = false, rplc_stdout = false, rplc_stderr = false;
 int save_stdin, save_stdout, save_stderr;
 
@@ -27,6 +30,8 @@ void parse(char *cmdline);
 void set_bg();
 void io_redirect();
 void io_reset();
+
+int set_pipe();
 
 void sigint_handler(int sig);
 
@@ -58,19 +63,21 @@ int main() {
 
         io_redirect();
 
+        if (!set_pipe()) {
+            if ((pid = fork()) == 0) {  // child process
+                execve(argv[0], argv, NULL);
+                exit(0);
+            }
+
+            if (!bg) {
+                int status;
+                Waitpid(pid, &status, 0);
+            } else {
+                printf("%d %s\n", pid, cmdline);
+            }
+        }
+
         // printf("%s\n", bg ? "bg" : "fg");
-
-        if ((pid = fork()) == 0) {  // child process
-            execve(argv[0], argv, NULL);
-            exit(0);
-        }
-
-        if (!bg) {
-            int status;
-            Waitpid(pid, &status, 0);
-        } else {
-            printf("%d %s\n", pid, cmdline);
-        }
 
         free(cmdline);
         for (int i = 0; i < argc; i++) free(argv[i]);
@@ -186,6 +193,52 @@ void io_reset() {
         dup2(save_stderr, 2);
         rplc_stderr = false;
     }
+}
+
+int set_pipe() {
+    // only one pipe
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "|") == 0) {
+            int argc1;
+            char *argv1[MAX_ARGS];
+            Pipe(pipe_fd);
+
+            int pid0, pid1;
+
+            if ((pid0 = Fork()) == 0) {
+                close(pipe_fd[0]);  // close read
+
+                dup2(pipe_fd[1], 1);
+
+                argv[i] = NULL;
+                execve(argv[0], argv, NULL);
+
+                exit(0);
+            }
+            if ((pid1 = Fork()) == 0) {
+                close(pipe_fd[1]);  // close write
+
+                dup2(pipe_fd[0], 0);
+
+                
+                for (int j = i + 1; j < argc; j++) {
+                    argv1[j - i - 1] = argv[j];
+
+                    printf("child1: %d : %s\n", j - i - 1, argv1[j - i - 1]);
+                }
+
+                argv1[argc - i - 1] = NULL;
+                execve(argv1[0], argv1, NULL);
+                exit(0);
+            }
+
+            int status;
+            Waitpid(pid1, &status, 0);
+
+            return 1;
+        }
+    }
+    return 0;
 }
 
 void sigint_handler(int sig) {

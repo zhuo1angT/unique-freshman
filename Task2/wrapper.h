@@ -48,4 +48,11 @@ int Kill(pid_t pid, int sig) {
     return ret;
 }
 
+int Pipe(int pipefd[2]) {
+    int ret;
+    if ((ret == pipe(pipefd)) < 0) {
+        unix_error("Error: pipe failed!");
+    }
+    return ret;
+}
 #endif
