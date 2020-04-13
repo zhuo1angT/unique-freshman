@@ -55,15 +55,14 @@ int main() {
         parse(cmdline);
         argv[argc] = NULL;
 
-        for (int i = 0; i < argc; i++) {
-            printf("%d: %s\n", i, argv[i]);
-        }
+        // for (int i = 0; i < argc; i++) {
+        //    printf("%d: %s\n", i, argv[i]);
+        //}
 
         set_bg();
-
-        io_redirect();
-
         if (!set_pipe()) {
+            io_redirect();
+
             if ((pid = fork()) == 0) {  // child process
                 execve(argv[0], argv, NULL);
                 exit(0);
@@ -75,10 +74,9 @@ int main() {
             } else {
                 printf("%d %s\n", pid, cmdline);
             }
+
+            // printf("%s\n", bg ? "bg" : "fg");
         }
-
-        // printf("%s\n", bg ? "bg" : "fg");
-
         free(cmdline);
         for (int i = 0; i < argc; i++) free(argv[i]);
         io_reset();
@@ -212,28 +210,48 @@ int set_pipe() {
 
                 argv[i] = NULL;
                 execve(argv[0], argv, NULL);
-
-                exit(0);
             }
             if ((pid1 = Fork()) == 0) {
                 close(pipe_fd[1]);  // close write
 
-                dup2(pipe_fd[0], 0);
+                // dup2(pipe_fd[0], 0);
+                {
+                    int _size_read = read(pipe_fd[0], pipe_buf, 4 * 1024);
+                    FILE *pipe_file = fopen("pipe_buf_file", "w");
 
-                
+                    for (int i = 0; i < _size_read; i++)
+                        fprintf(pipe_file, "%c", pipe_buf[i]);
+
+                    fclose(pipe_file);
+
+                    pipe_file = fopen("pipe_buf_file", "r");
+                    dup2(pipe_file->_fileno, 0);
+                }
+
                 for (int j = i + 1; j < argc; j++) {
                     argv1[j - i - 1] = argv[j];
-
-                    printf("child1: %d : %s\n", j - i - 1, argv1[j - i - 1]);
                 }
 
                 argv1[argc - i - 1] = NULL;
                 execve(argv1[0], argv1, NULL);
-                exit(0);
             }
 
             int status;
+
+            Waitpid(pid0, &status, 0);
+
+            // puts("check point 1");
+
+            char eof[] = {EOF};
+            // write(pipe_fd[0], eof, 1);
+
+            // puts("check point 2");
+
             Waitpid(pid1, &status, 0);
+
+            // puts("check point 3");
+
+            remove("pipe_buf_file");
 
             return 1;
         }
