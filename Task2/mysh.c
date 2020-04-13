@@ -20,6 +20,8 @@ int argc;
 char *argv[MAX_ARGS], *envp[MAX_ARGS];
 char cmd_buffer[MAX_LINE];
 
+int input_fd, output_fd;
+
 int pipe_fd[2];
 char pipe_buf[4 * 1024];
 
@@ -60,22 +62,27 @@ int main() {
         //}
 
         set_bg();
-        if (!set_pipe()) {
-            io_redirect();
 
-            if ((pid = fork()) == 0) {  // child process
-                execve(argv[0], argv, NULL);
-                exit(0);
+        io_redirect();
+
+        if (is_builtin(argv[0])) {
+            exec_builtin(argv[0], argv, NULL);
+        } else {
+            if (!set_pipe()) {
+                if ((pid = fork()) == 0) {  // child process
+                    execve(argv[0], argv, NULL);
+                    exit(0);
+                }
+
+                if (!bg) {
+                    int status;
+                    Waitpid(pid, &status, 0);
+                } else {
+                    printf("%d %s\n", pid, cmdline);
+                }
+
+                // printf("%s\n", bg ? "bg" : "fg");
             }
-
-            if (!bg) {
-                int status;
-                Waitpid(pid, &status, 0);
-            } else {
-                printf("%d %s\n", pid, cmdline);
-            }
-
-            // printf("%s\n", bg ? "bg" : "fg");
         }
         free(cmdline);
         for (int i = 0; i < argc; i++) free(argv[i]);
@@ -205,35 +212,48 @@ int set_pipe() {
 
             if ((pid0 = Fork()) == 0) {
                 close(pipe_fd[0]);  // close read
-
-                dup2(pipe_fd[1], 1);
-
                 argv[i] = NULL;
-                execve(argv[0], argv, NULL);
+                if (!is_builtin(argv[0])) {
+                    dup2(pipe_fd[1], 1);
+
+                    execve(argv[0], argv, NULL);
+                } else {
+                    output_fd = pipe_fd[1];
+
+                    exec_builtin(argv[0], argv, NULL);
+                    exit(0);
+                }
             }
             if ((pid1 = Fork()) == 0) {
                 close(pipe_fd[1]);  // close write
 
-                // dup2(pipe_fd[0], 0);
-                {
-                    int _size_read = read(pipe_fd[0], pipe_buf, 4 * 1024);
-                    FILE *pipe_file = fopen("pipe_buf_file", "w");
-
-                    for (int i = 0; i < _size_read; i++)
-                        fprintf(pipe_file, "%c", pipe_buf[i]);
-
-                    fclose(pipe_file);
-
-                    pipe_file = fopen("pipe_buf_file", "r");
-                    dup2(pipe_file->_fileno, 0);
-                }
-
                 for (int j = i + 1; j < argc; j++) {
                     argv1[j - i - 1] = argv[j];
                 }
-
                 argv1[argc - i - 1] = NULL;
-                execve(argv1[0], argv1, NULL);
+
+                // dup2(pipe_fd[0], 0);
+
+                // temp code start
+                int _size_read = read(pipe_fd[0], pipe_buf, 4 * 1024);
+                FILE *pipe_file = fopen("pipe_buf_file", "w");
+
+                for (int i = 0; i < _size_read; i++)
+                    fprintf(pipe_file, "%c", pipe_buf[i]);
+
+                fclose(pipe_file);
+
+                pipe_file = fopen("pipe_buf_file", "r");
+                // temp code end
+
+                if (!is_builtin(argv1[0])) {
+                    dup2(pipe_file->_fileno, 0);
+                    execve(argv1[0], argv1, NULL);
+                } else {
+                    input_fd = pipe_fd[0];
+                    exec_builtin(argv[0], argv, NULL);
+                    exit(0);
+                }
             }
 
             int status;
