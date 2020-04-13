@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -20,7 +21,8 @@ int argc;
 char *argv[MAX_ARGS], *envp[MAX_ARGS];
 char cmd_buffer[MAX_LINE];
 
-int input_fd, output_fd;
+FILE *input_file, *output_file;
+int input_fd = 0, output_fd = 1;
 
 int pipe_fd[2];
 char pipe_buf[4 * 1024];
@@ -30,7 +32,7 @@ int save_stdin, save_stdout, save_stderr;
 
 void parse(char *cmdline);
 void set_bg();
-void io_redirect();
+int io_redirect();
 void io_reset();
 
 int set_pipe();
@@ -57,18 +59,22 @@ int main() {
         parse(cmdline);
         argv[argc] = NULL;
 
-        // for (int i = 0; i < argc; i++) {
-        //    printf("%d: %s\n", i, argv[i]);
-        //}
+        /*
+        for (int i = 0; i < argc; i++) {
+            printf("%d: %s\n", i, argv[i]);
+        }
+        */
 
         set_bg();
 
-        io_redirect();
+        if (io_redirect()) goto exec;
 
-        if (is_builtin(argv[0])) {
-            exec_builtin(argv[0], argv, NULL);
-        } else {
-            if (!set_pipe()) {
+        if (!set_pipe()) {
+        exec:
+
+            if (is_builtin(argv[0])) {
+                exec_builtin(argv[0], argv, NULL);
+            } else {
                 if ((pid = fork()) == 0) {  // child process
                     execve(argv[0], argv, NULL);
                     exit(0);
@@ -85,7 +91,10 @@ int main() {
             }
         }
         free(cmdline);
-        for (int i = 0; i < argc; i++) free(argv[i]);
+        if (input_fd != 0 || output_fd != 1) argc += 2;
+        for (int i = 0; i < argc; i++) {
+            free(argv[i]);
+        }
         io_reset();
     }
 
@@ -152,37 +161,48 @@ void set_bg() {
         bg = false;
 }
 
-void io_redirect() {
+int io_redirect() {
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "<") == 0) {
             if (i + 2 == argc ||
-                (i + 3 == argc && strcmp(argv[argc - 1], "&"))) {
+                (i + 3 == argc && strcmp(argv[argc - 1], "&") == 0)) {
+                if (!is_builtin(argv[0])) {
+                    save_stdin = dup(0);
+                    FILE *new_input_stream = freopen(argv[i + 1], "r", stdin);
+                } else {
+                    input_file = fopen(argv[i + 1], "r");
+                    input_fd = input_file->_fileno;
+                }
                 rplc_stdin = true;
-                save_stdin = dup(0);
-                FILE *new_input_stream = freopen(argv[i + 1], "r", stdin);
-
                 argv[i] = NULL;
+                argc = i;
+                return true;
 
-                return;
-            } else {  // Error
+            } else {
                 // Todo: Error report
             }
         }
         if (strcmp(argv[i], ">") == 0) {
             if (i + 2 == argc ||
-                (i + 3 == argc && strcmp(argv[argc - 1], "&"))) {
+                (i + 3 == argc && strcmp(argv[argc - 1], "&") == 0)) {
+                if (!is_builtin(argv[0])) {
+                    save_stdout = dup(1);
+                    FILE *new_output_stream = freopen(argv[i + 1], "w", stdout);
+                } else {
+                    output_file = fopen(argv[i + 1], "w");
+                    output_fd = output_file->_fileno;
+                }
                 rplc_stdout = true;
-                save_stdout = dup(1);
-                FILE *new_output_stream = freopen(argv[i + 1], "w", stdout);
-
                 argv[i] = NULL;
+                argc = i;
+                return true;
 
-                return;
-            } else {  // Error
+            } else {
                 // Todo: Error report
             }
         }
     }
+    return false;
 }
 
 void io_reset() {
@@ -198,6 +218,11 @@ void io_reset() {
         dup2(save_stderr, 2);
         rplc_stderr = false;
     }
+
+    if (input_file && input_file->_fileno != 0) fclose(input_file);
+    if (input_file && output_file->_fileno != 1) fclose(output_file);
+    input_fd = 0;
+    output_fd = 1;
 }
 
 int set_pipe() {

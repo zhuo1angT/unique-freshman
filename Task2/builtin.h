@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -17,6 +18,8 @@ char pwd_buf[MAX_LINE];
 
 extern int argc;
 extern int input_fd, output_fd;
+
+extern FILE *input_file, *output_file;
 
 bool is_builtin(const char cmd[]);
 void exec_builtin(const char cmd[], const char* argv[], const char* envp);
@@ -41,7 +44,10 @@ void myPwd() {
     if (getcwd(pwd_buf, MAX_LINE) == NULL) {
         unix_error("Error: pwd failed\n");
     }
-    printf("%s\n", pwd_buf);
+    if (output_fd == 1)
+        printf("%s\n", pwd_buf);
+    else
+        write(output_fd, pwd_buf, strlen(pwd_buf));
 }
 
 void myKill(int pid) {
@@ -57,8 +63,8 @@ void myExport(const char* argv[]) {
 
 bool is_builtin(const char cmd[]) {
     if (strcmp(cmd, "echo") == 0 || strcmp(cmd, "exit") == 0 ||
-        strcmp(cmd, "cd") == 0 || strcmp(cmd, "pwd") || strcmp(cmd, "kill") ||
-        strcmp(cmd, "export")) {
+        strcmp(cmd, "cd") == 0 || strcmp(cmd, "pwd") == 0 ||
+        strcmp(cmd, "kill") == 0 || strcmp(cmd, "export") == 0) {
         return true;
     } else
         return false;
@@ -67,15 +73,15 @@ bool is_builtin(const char cmd[]) {
 void exec_builtin(const char cmd[], const char* argv[], const char* envp) {
     if (strcmp(cmd, "echo") == 0) {
         myEcho(argv);
-    } else if (strcmp(cmd, "exit")) {
+    } else if (strcmp(cmd, "exit") == 0) {
         myExit();
-    } else if (strcmp(cmd, "cd")) {
+    } else if (strcmp(cmd, "cd") == 0) {
         myCd(argv[1]);
-    } else if (strcmp(cmd, "pwd")) {
+    } else if (strcmp(cmd, "pwd") == 0) {
         myPwd();
-    } else if (strcmp(cmd, "kill")) {
+    } else if (strcmp(cmd, "kill") == 0) {
         myKill(atoi(argv[1]));
-    } else if (strcmp(cmd, "export")) {
+    } else if (strcmp(cmd, "export") == 0) {
         myExport(argv);
     }
 }
