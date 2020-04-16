@@ -94,8 +94,9 @@ int main(int argc, char *argv[]) {
 
     if (!lflag) {
         for (int i = 0; i < cnt; i++) {
-            printf("%s ", file_names[i]);
+            printf("%s  ", file_names[i]);
         }
+        puts("");
     } else {
         for (int i = 0; i < cnt; i++) {
             struct stat file_status;
@@ -141,8 +142,6 @@ int main(int argc, char *argv[]) {
             printf(" %s\n", file_names[i]);
         }
     }
-
     closedir(dir);
-
     exit(0);
 }
