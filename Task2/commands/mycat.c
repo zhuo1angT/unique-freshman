@@ -11,9 +11,8 @@ int main(int argc, char *argv[]) {
     char *buf = (char *)malloc(sizeof(char) * 1024);
     size_t bufsize = 1024;
 
-    size_t n_read;
-
     while (true) {
+        size_t n_read;
         n_read = read(file->_fileno, buf, bufsize);
 
         if (n_read == 0) break;

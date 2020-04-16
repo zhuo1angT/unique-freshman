@@ -159,9 +159,12 @@ void parse(char *cmdline) {
 }
 
 void set_bg() {
-    if (strcmp(argv[argc - 1], "&") == 0)
+    if (strcmp(argv[argc - 1], "&") == 0) {
         bg = true;
-    else
+        free(argv[argc - 1]);
+        argv[argc - 1] = NULL;
+        argc--;
+    } else
         bg = false;
 }
 
