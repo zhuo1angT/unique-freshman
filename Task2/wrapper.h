@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 void unix_error(char *msg) {  // unix-style error
-  fprintf(stderr, "%s\n errno: \"%s\"\n", strerror(errno), msg);
+  fprintf(stderr, "%s\nerrno:\"%s\"\n", msg, strerror(errno));
   exit(0);
 }
 
