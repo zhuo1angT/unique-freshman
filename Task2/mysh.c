@@ -63,12 +63,6 @@ int main() {
         parse(cmdline);
         argv[argc] = NULL;
 
-        /*
-        for (int i = 0; i < argc; i++) {
-            printf("%d: %s\n", i, argv[i]);
-        }
-        */
-
         set_bg();
 
         if (io_redirect()) goto exec;
@@ -90,8 +84,6 @@ int main() {
                 } else {
                     printf("%d %s\n", pid, cmdline);
                 }
-
-                // printf("%s\n", bg ? "bg" : "fg");
             }
         }
         free(cmdline);
@@ -292,16 +284,7 @@ int set_pipe() {
 
             Waitpid(pid0, &status, 0);
 
-            // puts("check point 1");
-
-            char eof[] = {EOF};
-            // write(pipe_fd[0], eof, 1);
-
-            // puts("check point 2");
-
             Waitpid(pid1, &status, 0);
-
-            // puts("check point 3");
 
             remove("pipe_buf_file");
 
