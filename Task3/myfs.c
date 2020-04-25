@@ -1,29 +1,20 @@
+#define FUSE_USE_VERSION 31
+#define _GNU_SOURCE
+
 #include "myfs.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+int myfs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
+                 off_t offset, struct fuse_file_info* fi) {
+    return filler(buf, "Hello, World\n", NULL, 0, 0);
+}
 
-static struct fuse_operations memfs_oper;
+int myfs_getattr(const char* path, struct stat* st) {
+    memset(st, 0, sizeof(struct stat));
 
-int main(int argc, char *argv[]) {
-    static struct fuse_operations myfs_oper = {
+    if (strcmp(path, "/") == 0)
+        st->st_mode = 0755 | S_IFDIR;
+    else
+        st->st_mode = 0644 | S_IFREG;
 
-        .getattr = myfs_getattr,
-        .access = myfs_access,
-        .readdir = myfs_readdir,
-
-        .open = myfs_open,
-        .read = myfs_read,
-        .write = myfs_write,
-        .release = myfs_release,
-
-        .mknod = myfs_mknod,
-        .unlink = myfs_unlink,
-
-        .mkdir = myfs_mkdir,
-        .rmdir = myfs_rmdir,
-
-        .statfs = myfs_statfs,
-    };
     return 0;
 }

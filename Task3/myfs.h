@@ -1,6 +1,8 @@
 #ifndef _UNIQUE_FS_H_
 #define _UNIQUE_FS_H_
 
+#define FUSE_USE_VERSION 31
+
 #include <fuse.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,8 +83,8 @@ int myfs_removexattr(const char *, const char *);
 // Open directory
 
 int myfs_opendir(const char *, struct fuse_file_info *);
-// Read directory
 
+// Read directory
 int myfs_readdir(const char *, void *, fuse_fill_dir_t, off_t,
                  struct fuse_file_info *);
 
