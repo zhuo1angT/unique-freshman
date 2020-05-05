@@ -3,6 +3,10 @@
 
 #define FUSE_USE_VERSION 31
 
+#define PATH_MAX 256
+#define LOWER_LAYER 0
+#define UPPER_LAYER 1
+
 #include <fuse.h>
 #include <stdio.h>
 #include <stdlib.h>
