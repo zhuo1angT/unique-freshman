@@ -46,6 +46,22 @@ class proxy_client:
 
         self.socket.send(base64.b16decode(packet_str, True))
 
+    # |VER | NUSERNAME | USERNAME | NPASSWORD | PASSWORD |
+    # +----+-----------+----------+-----------|----------|
+    # | 1  |    1      | 1 to 255 |    1      | 1 to 255 |
+    # +----+-----------+----------+-----------|----------|
+
+    def socks_verify(self, username: str, password: str):
+        packet_str = ""
+
+        packet_str += "05"  # VER
+        packet_str += to_hex(len(username), 2)  # NUSERNAME
+        packet_str += username  # USERNAME
+        packet_str += to_hex(len(password), 2)  # NPASSWORD
+        packet_str += password  # PASSWORD
+
+        self.socket.send(base64.b16decode(packet_str, True))
+
     # +----+-----+-------+------+----------+----------+
     # |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
     # +----+-----+-------+------+----------+----------+
@@ -53,7 +69,10 @@ class proxy_client:
     # +----+-----+-------+------+----------+----------+
 
     # Only implement the IPv4 part
-    def socks_requst(self, socket: socket.socket, address: tuple, cmd: int, atyp: int) -> None:
+
+    def socks_requst(self, address: tuple, cmd: int) -> None:
+
+        atyp = 1
 
         packet_str = ""
 
