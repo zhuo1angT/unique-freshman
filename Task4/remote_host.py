@@ -3,11 +3,12 @@ import socketserver
 import logging
 import struct
 import select
-
+import sys
 
 from encrypt import *
 
-
+addr = ''
+port = 0
 password = ''
 
 
@@ -17,19 +18,19 @@ class SocksProxyRemote(socketserver.StreamRequestHandler):
     BUF_SIZE = 4 * 1024
     TIMEOUT = 10
 
-    def exchange_loop(self, local, server):
+    def exchange_loop(self, local, server, encrypt, decrypt):
         while True:
             # wait until client or remote is available for read
             r, w, x = select.select([local, server], [], [])
 
             if local in r:
                 data = local.recv(SocksProxyRemote.BUF_SIZE)
-                if server.send(data) <= 0:
+                if server.send(decrypt(data)) <= 0:
                     break
 
             if server in r:
                 data = server.recv(SocksProxyRemote.BUF_SIZE)
-                if local.send(data) <= 0:
+                if local.send(encrypt(data)) <= 0:
                     break
 
     def handle(self):
@@ -37,7 +38,11 @@ class SocksProxyRemote(socketserver.StreamRequestHandler):
                      self.client_address)
         while True:
             npassword = struct.unpack("!B", self.request.recv(1))
-            given_password = self.request.recv(npassword).decode('utf-8')
+
+            given_password = self.request.recv(npassword[0]).decode('utf-8')
+
+            print(given_password)
+            print(type(given_password))
 
             if given_password != password:
                 self.server.close_request(self.request)
@@ -55,18 +60,19 @@ class SocksProxyRemote(socketserver.StreamRequestHandler):
 
             decrypt = gen_decryptor(encrypt)
 
-            ver = struct.unpack(decrypt(self.request.recv(1)))
-            cmd = struct.unpack(decrypt(self.request.recv(1)))
+            ver = struct.unpack("!B", decrypt(self.request.recv(1)))[0]
+            cmd = struct.unpack("!B", decrypt(self.request.recv(1)))[0]
             padding = self.request.recv(1)
-            atyp = struct.unpack(decrypt(self.request.recv(1)))
+            atyp = struct.unpack("!B", decrypt(self.request.recv(1)))[0]
 
             assert ver == SocksProxyRemote.SOCKS_VERSION
 
             if atyp == 1:  # dotted decimal IPv4 address
-                address = socket.inet_ntoa(self.request.recv(4))
+                address = socket.inet_ntoa(decrypt(self.request.recv(4)))
             elif atyp == 3:  # Domain name
-                domain_length = self.request.recv(1)[0]
-                address = self.request.recv(domain_length)
+                domain_length = decrypt(self.request.recv(1))[0]  # int
+                address = decrypt(self.request.recv(
+                    domain_length)).decode('utf-8')  # str
 
             port = struct.unpack('!H', decrypt(self.request.recv(2)))[0]
 
@@ -99,8 +105,20 @@ class SocksProxyRemote(socketserver.StreamRequestHandler):
 
             # establish data exchange
             if reply[1] == 0 and cmd == 1:
-                self.exchange_loop(self.request, server)
+                self.exchange_loop(self.request, server, encrypt, decrypt)
 
             self.server.close_request(self.request)
 
         return
+
+
+if __name__ == '__main__':
+    addr = sys.argv[1]
+    port = int(sys.argv[2])
+    password = sys.argv[3]
+
+    print(addr)
+    print(port)
+    print(password)
+    with socketserver.ThreadingTCPServer((addr, port), SocksProxyRemote) as server:
+        server.serve_forever()
