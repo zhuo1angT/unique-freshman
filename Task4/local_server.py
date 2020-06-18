@@ -110,7 +110,6 @@ class SocksProxyLocal(socketserver.StreamRequestHandler):
                 elif atyp == 3:  # Domain name
                     remote.send(encrypt(struct.pack("!B", domain_length)))
                     remote.send(encrypt(address))
-
                 remote.send(encrypt(struct.pack("!H", port)))
 
                 reply = decrypt(remote.recv(4))
@@ -125,7 +124,7 @@ class SocksProxyLocal(socketserver.StreamRequestHandler):
                     reply += decrypt(remote.recv(domain_length))  # bytes
 
             except Exception as err:
-                logging.error(err)
+                # logging.error(err)
                 # return connection refused error
                 reply = struct.pack(
                     "!BBBBIH", SocksProxyLocal.SOCKS_VERSION, 5, 0, atyp, 0, 0)
