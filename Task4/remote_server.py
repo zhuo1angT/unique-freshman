@@ -21,7 +21,7 @@ class SocksProxyRemote(socketserver.StreamRequestHandler):
     def exchange_loop(self, local, server, encrypt, decrypt):
         while True:
             # wait until client or remote is available for read
-            r, w, x = select.select([local, server], [], [])
+            r, _, _ = select.select([local, server], [], [])
 
             if local in r:
                 data = local.recv(SocksProxyRemote.BUF_SIZE)

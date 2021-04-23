@@ -22,14 +22,14 @@ class SocksProxyLocal(socketserver.StreamRequestHandler):
 
     def get_methods(self, n):
         methods = []
-        for i in range(n):
+        for _ in range(n):
             methods.append(ord(self.request.recv(1)))
         return methods
 
     def exchange_loop(self, client: socket.socket, remote: socket.socket, encrypt, decrypt):
         while True:
             # wait until client or remote is available for read
-            r, w, x = select.select([client, remote], [], [])
+            r, _, _ = select.select([client, remote], [], [])
 
             if client in r:
                 data = client.recv(SocksProxyLocal.BUF_SIZE)
@@ -123,7 +123,7 @@ class SocksProxyLocal(socketserver.StreamRequestHandler):
                     reply += struct.pack("!B", domain_length)
                     reply += decrypt(remote.recv(domain_length))  # bytes
 
-            except Exception as err:
+            except Exception as _:
                 # logging.error(err)
                 # return connection refused error
                 reply = struct.pack(
