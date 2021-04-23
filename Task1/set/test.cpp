@@ -12,36 +12,36 @@ unique::set<int> stuSet;
 const int SIZE = 600000;
 
 TEST(IsEmptyTest, HandlerTrueReturn) {
-    ASSERT_TRUE(stdSet.empty() == stuSet.empty())
-        << "You didn't pass the empty test";
+  ASSERT_TRUE(stdSet.empty() == stuSet.empty())
+      << "You didn't pass the empty test";
 }
 
 TEST(InsertTest, HandlerTrueReturn) {
-    for (int i = 0; i < SIZE; i++) {
-        int k = rand();
-        stdSet.insert(k);
-        stuSet.insert(k);
-    }
-    ASSERT_TRUE(stdSet.size() == stuSet.size())
-        << "You didn't pass the insert test";
+  for (int i = 0; i < SIZE; i++) {
+    int k = rand();
+    stdSet.insert(k);
+    stuSet.insert(k);
+  }
+  ASSERT_TRUE(stdSet.size() == stuSet.size())
+      << "You didn't pass the insert test";
 }
 
 TEST(CountAndEraseTest, HandlerTrueReturn) {
-    int size = stuSet.size();
-    for (auto s : stdSet) {
-        ASSERT_TRUE(stuSet.count(s) == 1) << "You didn't pass the count test";
-        stuSet.erase(s);
-        size--;
-        ASSERT_TRUE(stuSet.size() == (unsigned long int)size)
-            << "You didn't pass the erase test";
-    }
+  int size = stuSet.size();
+  for (auto s : stdSet) {
+    ASSERT_TRUE(stuSet.count(s) == 1) << "You didn't pass the count test";
+    stuSet.erase(s);
+    size--;
+    ASSERT_TRUE(stuSet.size() == (unsigned long int)size)
+        << "You didn't pass the erase test";
+  }
 }
 
 TEST(ClearTest, HandlerTrueReturn) {
-    stuSet.clear();
-    stdSet.clear();
-    ASSERT_TRUE(stuSet.size() == stdSet.size())
-        << "You didn't pass the clear test";
+  stuSet.clear();
+  stdSet.clear();
+  ASSERT_TRUE(stuSet.size() == stdSet.size())
+      << "You didn't pass the clear test";
 }
 /*
 TEST(AdvancedTest, HandlerTrueReturn) {
@@ -104,7 +104,7 @@ TEST(AdvancedTest, HandlerTrueReturn) {
 }
 */
 int main(int argc, char *argv[]) {
-    testing::InitGoogleTest(&argc, argv);
-    srand(time(NULL));
-    return RUN_ALL_TESTS();
+  testing::InitGoogleTest(&argc, argv);
+  srand(time(NULL));
+  return RUN_ALL_TESTS();
 }
